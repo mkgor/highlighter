@@ -30,13 +30,27 @@ require_once "vendor/autoload.php";
 
 $highlighter = new \Highlighter\Highlighter();
 
-echo $highlighter->getLineWithNeighbors(__FILE__, 3);
+echo $highlighter->getSnippet(__FILE__, 3);
 ````
 
 #### Result
 
 ![Result](https://i.imgur.com/iqEfh0d.png)
 
+## Printing code snippet with specified lines
+````php
+<?php
+
+require_once "vendor/autoload.php";
+
+$highlighter = new \Highlighter\Highlighter();
+
+echo $highlighter->getSpecifiedSnippet(__FILE__, 3, 5);
+````
+
+#### Result
+
+![Result](https://i.imgur.com/uuajqgQ.png)
 
 ## Printing single line
 ````php
@@ -51,3 +65,21 @@ echo $highlighter->getLine(__FILE__, 3);
 #### Result
 
 ![Result](https://i.imgur.com/qfJWGrP.png)
+
+
+##
+You can use same functions with suffix `WithoutNumbers` to highlight code without line numbers:
+
+```php
+<?php
+
+require_once "vendor/autoload.php";
+
+$highlighter = new \Highlighter\Highlighter();
+
+echo $highlighter->getWholeFileWithoutNumbers(__FILE__);
+```
+
+#### Result
+
+![Result](https://i.imgur.com/F7Mo4Rq.png)

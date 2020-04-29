@@ -91,6 +91,33 @@ class Highlighter
     }
 
     /**
+     * @param     $file
+     * @param     $num
+     * @param int $range
+     *
+     * @return string
+     * @throws Exception
+     */
+    public function getSpecifiedSnippet($file, $from, $to)
+    {
+        /** Highlighting syntax of file and storing in into array in renderer */
+        $this->lineRenderer->highlightSyntax(file_get_contents($file));
+
+        $result = "";
+
+        /**
+         * Building final result
+         *
+         * @var int $lineNum
+         */
+        for ($i = $from; $i <= $to; $i++) {
+            $result .= $this->lineRenderer->renderLine($i);
+        }
+
+        return $result;
+    }
+
+    /**
      * @param $file
      *
      * @return string
@@ -165,6 +192,37 @@ class Highlighter
          */
         foreach ($range as $lineNum) {
             $result .= $fileStore[$lineNum] . "\n";
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param     $file
+     * @param     $num
+     * @param int $range
+     *
+     * @return string
+     * @throws Exception
+     */
+    public function getSpecifiedSnippetWithoutNumbers($file, $from, $to)
+    {
+        $fileLines = $this->getFileLines($file);
+
+        /** Highlighting syntax of file and storing in into array in renderer */
+        $this->lineRenderer->highlightSyntax(file_get_contents($file));
+
+        $result = "";
+
+        $fileStore = $this->lineRenderer->getFileStore();
+
+        /**
+         * Building final result
+         *
+         * @var int $lineNum
+         */
+        for ($i = $from; $i <= $to; $i++) {
+            $result .= $fileStore[$i] . "\n";
         }
 
         return $result;

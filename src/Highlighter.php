@@ -24,12 +24,21 @@ class Highlighter
      * Highlighter constructor.
      *
      * @param RendererInterface|null $lineRenderer
+     * @param null                   $theme
      */
-    public function __construct(RendererInterface $lineRenderer = null)
+    public function __construct(RendererInterface $lineRenderer = null, $theme = null)
     {
         /** If specified custom line renderer - using it. Else - using standard line renderer */
         /** @var RendererInterface lineRenderer */
-        $this->lineRenderer = $lineRenderer ? $lineRenderer : new StandardLineRenderer();
+        if ($lineRenderer) {
+            $this->lineRenderer = $lineRenderer;
+        } else {
+            $this->lineRenderer = new StandardLineRenderer();
+        }
+
+        if ($theme) {
+            $this->lineRenderer->setTheme($theme);
+        }
     }
 
     /**
@@ -57,7 +66,7 @@ class Highlighter
      * @return string
      * @throws Exception
      */
-    public function getLineWithNeighbors($file, $num, $range = 5)
+    public function getSnippet($file, $num, $range = 5)
     {
         $fileLines = $this->getFileLines($file);
 
@@ -74,14 +83,19 @@ class Highlighter
          *
          * @var int $lineNum
          */
-        foreach($range as $lineNum)
-        {
+        foreach ($range as $lineNum) {
             $result .= $this->lineRenderer->renderLine($lineNum, ($lineNum == $num));
         }
 
         return $result;
     }
 
+    /**
+     * @param $file
+     *
+     * @return string
+     * @throws Exception
+     */
     public function getWholeFile($file)
     {
         $fileLines = $this->getFileLines($file);
@@ -96,9 +110,88 @@ class Highlighter
          *
          * @var int $lineNum
          */
-        foreach(array_keys($fileLines) as $lineNum)
-        {
+        foreach (array_keys($fileLines) as $lineNum) {
             $result .= $this->lineRenderer->renderLine($lineNum + 1);
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * @param     $file
+     *
+     * @param     $num
+     *
+     * @return string
+     * @throws Exception
+     */
+    public function getLineWithoutNumbers($file, $num)
+    {
+        /** Highlighting syntax of file and storing in into array in renderer */
+        $this->lineRenderer->highlightSyntax(file_get_contents($file));
+
+        $fileStore = $this->lineRenderer->getFileStore();
+
+        return $fileStore[$num];
+    }
+
+    /**
+     * @param     $file
+     * @param     $num
+     * @param int $range
+     *
+     * @return string
+     * @throws Exception
+     */
+    public function getSnippetWithoutNumbers($file, $num, $range = 5)
+    {
+        $fileLines = $this->getFileLines($file);
+
+        /** @var array $range */
+        $range = $this->generateNumberSeries(count($fileLines), $range, $num);
+
+        /** Highlighting syntax of file and storing in into array in renderer */
+        $this->lineRenderer->highlightSyntax(file_get_contents($file));
+
+        $result = "";
+
+        $fileStore = $this->lineRenderer->getFileStore();
+
+        /**
+         * Building final result
+         *
+         * @var int $lineNum
+         */
+        foreach ($range as $lineNum) {
+            $result .= $fileStore[$lineNum] . "\n";
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param     $file
+     *
+     * @return string
+     * @throws Exception
+     */
+    public function getWholeFileWithoutNumbers($file)
+    {
+        /** Highlighting syntax of file and storing in into array in renderer */
+        $this->lineRenderer->highlightSyntax(file_get_contents($file));
+
+        $result = "";
+
+        $fileStore = $this->lineRenderer->getFileStore();
+
+        /**
+         * Building final result
+         *
+         * @var int $lineNum
+         */
+        foreach ($fileStore as $line) {
+            $result .= $line . "\n";
         }
 
         return $result;

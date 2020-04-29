@@ -38,6 +38,38 @@ class StandardLineRenderer implements RendererInterface
     private $fileStore;
 
     /**
+     * @return array
+     */
+    public function getFileStore()
+    {
+        return $this->fileStore;
+    }
+
+    /**
+     * @param array $fileStore
+     */
+    public function setFileStore($fileStore)
+    {
+        $this->fileStore = $fileStore;
+    }
+
+    /**
+     * @return array
+     */
+    public function getTheme()
+    {
+        return $this->theme;
+    }
+
+    /**
+     * @param array $theme
+     */
+    public function setTheme($theme)
+    {
+        $this->theme = $theme;
+    }
+
+    /**
      * @param      $lineNum
      * @param bool $highlight
      *
@@ -70,17 +102,23 @@ class StandardLineRenderer implements RendererInterface
     public function highlightSyntax($phpString)
     {
         $tokens = $this->tokenize($phpString);
+        $preparedLines = $this->handleTokens($tokens);
+
         $lines = [];
 
-        foreach ($tokens as $token) {
-            $line = sprintf("%s%s%s", $this->buildStyleCode([$this->theme[$token['name']]]), $token['content'], self::ANSI_RESET_STYLES);
+        foreach ($preparedLines as $i => $tokenLine) {
+            $line = '';
+            foreach($tokenLine as $token) {
+                $line .= sprintf("%s%s%s", $this->buildStyleCode([$this->theme[$token['name']]]), $token['content'], self::ANSI_RESET_STYLES);
+            }
 
-            $lines[$token['line']] .= $line;
+            $lines[$i + 1] .= $line;
         }
 
         foreach ($lines as $i => $line) {
             $lines[$i] = str_replace("\r\n", "", $line);
         }
+
         $this->fileStore = $lines;
 
         return $lines;
@@ -169,5 +207,38 @@ class StandardLineRenderer implements RendererInterface
         }
 
         return $result;
+    }
+
+    /**
+     * @param array $tokens
+     * @return array
+     */
+    private function handleTokens(array $tokens)
+    {
+        $lines = array();
+
+        $line = array();
+
+        foreach ($tokens as $token) {
+            foreach (explode("\n", $token['content']) as $count => $tokenLine) {
+                if ($count > 0) {
+                    $lines[] = $line;
+                    $line = array();
+                }
+
+                if ($tokenLine === '') {
+                    continue;
+                }
+
+                $line[] = [
+                    'name' => $token['name'],
+                    'content' => $tokenLine
+                ];
+            }
+        }
+
+        $lines[] = $line;
+
+        return $lines;
     }
 }

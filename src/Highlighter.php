@@ -5,6 +5,7 @@ namespace Highlighter;
 use Exception;
 use Highlighter\Renderer\RendererInterface;
 use Highlighter\Renderer\StandardLineRenderer;
+use Highlighter\Theme\ThemeInterface;
 
 /**
  * Class Highlighter
@@ -14,6 +15,14 @@ use Highlighter\Renderer\StandardLineRenderer;
 class Highlighter
 {
     use HighlighterTrait;
+
+    const TOKEN_DEFAULT = 'default',
+        TOKEN_COMMENT   = 'comment',
+        TOKEN_STRING    = 'string',
+        TOKEN_HTML      = 'html',
+        TOKEN_KEYWORD   = 'keyword',
+        TOKEN_VARIABLE  = 'variable',
+        TOKEN_FUNC      = 'func';
 
     /**
      * @var RendererInterface
@@ -26,7 +35,7 @@ class Highlighter
      * @param RendererInterface|null $lineRenderer
      * @param null                   $theme
      */
-    public function __construct(RendererInterface $lineRenderer = null, $theme = null)
+    public function __construct(RendererInterface $lineRenderer = null)
     {
         /** If specified custom line renderer - using it. Else - using standard line renderer */
         /** @var RendererInterface lineRenderer */
@@ -35,10 +44,31 @@ class Highlighter
         } else {
             $this->lineRenderer = new StandardLineRenderer();
         }
+    }
 
-        if ($theme) {
-            $this->lineRenderer->setTheme($theme);
-        }
+    /**
+     * @param ThemeInterface $theme
+     */
+    public function setTheme(ThemeInterface $theme)
+    {
+        $this->lineRenderer->setTheme([
+            Highlighter::TOKEN_STRING   => $theme->getStringColor(),
+            Highlighter::TOKEN_COMMENT  => $theme->getCommentColor(),
+            Highlighter::TOKEN_KEYWORD  => $theme->getKeywordColor(),
+            Highlighter::TOKEN_DEFAULT  => $theme->getDefaultColor(),
+            Highlighter::TOKEN_HTML     => $theme->getHTMLColor(),
+            Highlighter::TOKEN_VARIABLE => $theme->getVariableColor(),
+            Highlighter::TOKEN_FUNC     => $theme->getFuncColor(),
+
+            'line_begin_color'     => $theme->getLineBeginColor(),
+            'line_number_bg_color' => $theme->getLineNumberBgColor(),
+            'line_number_color'    => $theme->getLineNumberColor(),
+
+            'line_number_highlighted_bg_color' => $theme->getLineNumberHighlightedBgColor(),
+            'line_number_highlighted_color' => $theme->getLineNumberHighlightedColor(),
+
+            'line_highlight_bg_color' => $theme->getLineHighlightBgColor(),
+        ]);
     }
 
     /**

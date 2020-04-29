@@ -3,6 +3,7 @@
 
 namespace Highlighter\Renderer;
 
+use Highlighter\Highlighter;
 use Highlighter\Styles;
 
 /**
@@ -12,27 +13,29 @@ use Highlighter\Styles;
  */
 class StandardLineRenderer implements RendererInterface
 {
-    const TOKEN_DEFAULT = 'default',
-        TOKEN_COMMENT = 'comment',
-        TOKEN_STRING = 'string',
-        TOKEN_HTML = 'html',
-        TOKEN_KEYWORD = 'keyword',
-        TOKEN_VARIABLE = 'variable';
-
     /**
      * @var array
      */
     private $theme = [
-        self::TOKEN_STRING   => 'light_yellow',
-        self::TOKEN_COMMENT  => 'green',
-        self::TOKEN_KEYWORD  => 'blue',
-        self::TOKEN_DEFAULT  => 'default',
-        self::TOKEN_HTML     => 'cyan',
-        self::TOKEN_VARIABLE => "light_cyan",
+        Highlighter::TOKEN_STRING   => 'light_yellow',
+        Highlighter::TOKEN_COMMENT  => 'green',
+        Highlighter::TOKEN_KEYWORD  => 'blue',
+        Highlighter::TOKEN_DEFAULT  => 'default',
+        Highlighter::TOKEN_HTML     => 'cyan',
+        Highlighter::TOKEN_VARIABLE => "light_cyan",
+        Highlighter::TOKEN_FUNC     => "light_blue",
+
+        'line_begin_color'     => 'bg_yellow',
+        'line_number_bg_color' => 'bg_dark_gray',
+        'line_number_color'    => 'light_gray',
+
+        'line_number_highlighted_bg_color' => 'bg_light_red',
+        'line_number_highlighted_color' => 'dark_gray',
+
+        'line_highlight_bg_color' => 'bg_dark_gray'
     ];
 
     const ANSI_RESET_STYLES = "\x1b[0m";
-
 
     /** @var array */
     private $fileStore;
@@ -80,16 +83,16 @@ class StandardLineRenderer implements RendererInterface
         end($this->fileStore);
 
         $lineStrlen = strlen(key($this->fileStore) + 1);
-        $boldLine = sprintf("%s %s", $this->buildStyleCode(['bg_yellow']), self::ANSI_RESET_STYLES);
+        $boldLine = sprintf("%s %s", $this->buildStyleCode([$this->theme['line_begin_color']]), self::ANSI_RESET_STYLES);
 
-        $lineNumColoured = sprintf("%s %s %s", $this->buildStyleCode((!$highlight) ? ['light_gray', 'bg_dark_gray'] : ['dark_gray', 'bg_light_red']), str_pad($lineNum, $lineStrlen, ' ', STR_PAD_LEFT), self::ANSI_RESET_STYLES);
+        $lineNumColoured = sprintf("%s %s %s", $this->buildStyleCode((!$highlight) ? [$this->theme['line_number_color'], $this->theme['line_number_bg_color']] : [$this->theme['line_number_highlighted_color'], $this->theme['line_number_highlighted_bg_color']]), str_pad($lineNum, $lineStrlen, ' ', STR_PAD_LEFT), self::ANSI_RESET_STYLES);
 
         if (!$highlight) {
             return sprintf("%s%s %s\n", $boldLine, $lineNumColoured, $this->fileStore[$lineNum]);
         } else {
             $line = str_replace("\x1b[0m", "", $this->fileStore[$lineNum]);
 
-            return sprintf("%s%s%s%s%s\n", $boldLine, $lineNumColoured, $this->buildStyleCode(['bg_dark_gray']), ' ' . $line, self::ANSI_RESET_STYLES);
+            return sprintf("%s%s%s%s%s\n", $boldLine, $lineNumColoured, $this->buildStyleCode([$this->theme['line_highlight_bg_color']]), ' ' . $line, self::ANSI_RESET_STYLES);
         }
     }
 
@@ -108,7 +111,7 @@ class StandardLineRenderer implements RendererInterface
 
         foreach ($preparedLines as $i => $tokenLine) {
             $line = '';
-            foreach($tokenLine as $token) {
+            foreach ($tokenLine as $token) {
                 $line .= sprintf("%s%s%s", $this->buildStyleCode([$this->theme[$token['name']]]), $token['content'], self::ANSI_RESET_STYLES);
             }
 
@@ -149,6 +152,7 @@ class StandardLineRenderer implements RendererInterface
     {
         $tokens = token_get_all($code);
 
+
         $result = [];
         $lastLine = 0;
 
@@ -158,40 +162,42 @@ class StandardLineRenderer implements RendererInterface
                     case T_WHITESPACE:
                         break;
                     case T_VARIABLE:
-                        $newType = self::TOKEN_VARIABLE;
+                        $newType = Highlighter::TOKEN_VARIABLE;
                         break;
                     case T_OPEN_TAG:
                     case T_OPEN_TAG_WITH_ECHO:
                     case T_CLOSE_TAG:
-                    case T_STRING:
                     case T_DIR:
                     case T_FILE:
-                    case T_METHOD_C:
                     case T_DNUMBER:
                     case T_LNUMBER:
                     case T_NS_C:
                     case T_LINE:
                     case T_CLASS_C:
                     case T_TRAIT_C:
-                        $newType = self::TOKEN_DEFAULT;
+                        $newType = Highlighter::TOKEN_DEFAULT;
                         break;
 
                     case T_COMMENT:
                     case T_DOC_COMMENT:
-                        $newType = self::TOKEN_COMMENT;
+                        $newType = Highlighter::TOKEN_COMMENT;
                         break;
 
                     case T_ENCAPSED_AND_WHITESPACE:
                     case T_CONSTANT_ENCAPSED_STRING:
-                        $newType = self::TOKEN_STRING;
+                        $newType = Highlighter::TOKEN_STRING;
                         break;
 
                     case T_INLINE_HTML:
-                        $newType = self::TOKEN_HTML;
+                        $newType = Highlighter::TOKEN_HTML;
+                        break;
+
+                    case T_STRING:
+                        $newType = Highlighter::TOKEN_FUNC;
                         break;
 
                     default:
-                        $newType = self::TOKEN_KEYWORD;
+                        $newType = Highlighter::TOKEN_KEYWORD;
                 }
 
                 $result[$i]['name'] = $newType;
@@ -200,7 +206,7 @@ class StandardLineRenderer implements RendererInterface
 
                 $lastLine = $token[2];
             } else {
-                $result[$i]['name'] = self::TOKEN_DEFAULT;
+                $result[$i]['name'] = Highlighter::TOKEN_DEFAULT;
                 $result[$i]['content'] = $token;
                 $result[$i]['line'] = $lastLine;
             }
@@ -211,19 +217,20 @@ class StandardLineRenderer implements RendererInterface
 
     /**
      * @param array $tokens
+     *
      * @return array
      */
     private function handleTokens(array $tokens)
     {
-        $lines = array();
+        $lines = [];
 
-        $line = array();
+        $line = [];
 
         foreach ($tokens as $token) {
             foreach (explode("\n", $token['content']) as $count => $tokenLine) {
                 if ($count > 0) {
                     $lines[] = $line;
-                    $line = array();
+                    $line = [];
                 }
 
                 if ($tokenLine === '') {
@@ -231,8 +238,8 @@ class StandardLineRenderer implements RendererInterface
                 }
 
                 $line[] = [
-                    'name' => $token['name'],
-                    'content' => $tokenLine
+                    'name'    => $token['name'],
+                    'content' => $tokenLine,
                 ];
             }
         }
